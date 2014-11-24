@@ -51,23 +51,26 @@ static UIImageOrientation ImageOrientationFromInterfaceOrientation(UIInterfaceOr
     return self;
 }
 
+static const CGFloat BlurryBackgroundViewMargin = 3.0f;
+static const CGFloat BlurryBackgroundViewCornerRadius = 3.0f;
+
 - (void)perform
 {
     UIViewController* source = (UIViewController*)self.sourceViewController;
     UIViewController* destination = (UIViewController*)self.destinationViewController;
-
+    
     CGRect windowBounds = source.view.window.bounds;
     
     // Normalize based on the orientation
     CGRect nomalizedWindowBounds = [source.view convertRect:windowBounds fromView:nil];
     
     UIGraphicsBeginImageContextWithOptions(windowBounds.size, YES, 0.0);
-
+    
     [source.view.window drawViewHierarchyInRect:windowBounds afterScreenUpdates:NO];
     UIImage *snapshot = UIGraphicsGetImageFromCurrentImageContext();
-    
+    UIImage *coverImage = UIGraphicsGetImageFromCurrentImageContext();
     UIGraphicsEndImageContext();
-
+    
     if (self.processBackgroundImage)
     {
         snapshot = self.processBackgroundImage(self, snapshot);
@@ -99,7 +102,10 @@ static UIImageOrientation ImageOrientationFromInterfaceOrientation(UIInterfaceOr
     destination.view.clipsToBounds = YES;
     
     UIImageView* backgroundImageView = [[UIImageView alloc] initWithImage:snapshot];
-
+    backgroundImageView.tag = BlurryViewSubviewTagBackground;
+    UIImageView *coverImageView = [[UIImageView alloc] initWithImage:coverImage];
+    coverImageView.tag = BlurryViewSubviewTagCover;
+    
     CGRect frame;
     switch (destination.modalTransitionStyle) {
         case UIModalTransitionStyleCoverVertical:
@@ -112,16 +118,27 @@ static UIImageOrientation ImageOrientationFromInterfaceOrientation(UIInterfaceOr
             frame = CGRectMake(0, 0, nomalizedWindowBounds.size.width, nomalizedWindowBounds.size.height);
             break;
     }
+    
+    coverImageView.frame = frame;
+    [destination.view addSubview:coverImageView];
+    [destination.view sendSubviewToBack:coverImageView];
+    
     backgroundImageView.frame = frame;
+    backgroundImageView.layer.cornerRadius = BlurryBackgroundViewCornerRadius;
+    backgroundImageView.clipsToBounds = YES;
     
     [destination.view addSubview:backgroundImageView];
     [destination.view sendSubviewToBack:backgroundImageView];
     
-    [self.sourceViewController presentModalViewController:self.destinationViewController animated:YES];
+    [self.sourceViewController presentModalViewController:self.destinationViewController animated:NO];
     
     [destination.transitionCoordinator animateAlongsideTransition:^(id<UIViewControllerTransitionCoordinatorContext> context) {
-        backgroundImageView.frame = CGRectMake(0, 0, nomalizedWindowBounds.size.width, nomalizedWindowBounds.size.height);
-    } completion:nil];
+        backgroundImageView.frame = CGRectMake(BlurryBackgroundViewMargin, BlurryBackgroundViewMargin, nomalizedWindowBounds.size.width - BlurryBackgroundViewMargin * 2, nomalizedWindowBounds.size.height - BlurryBackgroundViewMargin * 2);
+    } completion:^(id<UIViewControllerTransitionCoordinatorContext> context) {
+        [UIView animateWithDuration:0.3 animations:^{
+            coverImageView.alpha = 0;
+        }];
+    }];
 }
 
 @end

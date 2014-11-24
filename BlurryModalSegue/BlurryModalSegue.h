@@ -8,6 +8,11 @@
 
 #import <UIKit/UIKit.h>
 
+typedef NS_ENUM(NSInteger, BlurryViewSubviewTag) {
+    BlurryViewSubviewTagBackground = 1,
+    BlurryViewSubviewTagCover
+};
+
 @class BlurryModalSegue;
 
 typedef UIImage*(^ProcessBackgroundImage)(BlurryModalSegue* blurryModalSegue, UIImage* rawImage);
